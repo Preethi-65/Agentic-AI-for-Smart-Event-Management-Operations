@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Milestone 3 Dashboard{% endblock %}
+{% block heading %}Milestone 3 — Sponsorship &amp; Incident Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-6">
+  <div class="card">
+    <div class="stat-icon icon-purple">🤝</div>
+    <div class="card-title">Total Sponsors</div>
+    <div class="card-value">{{ sponsor_stats.total_sponsors }}</div>
+    <div class="card-sub">{{ sponsor_stats.active_sponsors }} active</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-teal">📈</div>
+    <div class="card-title">Avg Engagement</div>
+    <div class="card-value">{{ sponsor_stats.avg_engagement }}%</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-amber">📦</div>
+    <div class="card-title">Pending Deliverables</div>
+    <div class="card-value">{{ sponsor_stats.pending_deliverables }}</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-green">🎯</div>
+    <div class="card-title">Total Leads</div>
+    <div class="card-value">{{ sponsor_stats.total_leads }}</div>
+    <div class="card-sub">{{ sponsor_stats.avg_conversion }}% avg conversion</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-pink">🚨</div>
+    <div class="card-title">Open Incidents</div>
+    <div class="card-value">{{ incident_stats.open + incident_stats.in_progress }}</div>
+    <div class="card-sub">{{ incident_stats.resolved }} resolved</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-purple">🔴</div>
+    <div class="card-title">Critical / High</div>
+    <div class="card-value">{{ incident_stats.critical }} / {{ incident_stats.high }}</div>
+    <div class="card-sub">currently unresolved</div>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="alert-summary-strip">
+  <div class="alert-count-chip chip-Critical">
+    <div class="card-title">Critical Alerts</div>
+    <div class="count">{{ alert_counts.Critical }}</div>
+  </div>
+  <div class="alert-count-chip chip-High">
+    <div class="card-title">High-Priority Alerts</div>
+    <div class="count">{{ alert_counts.High }}</div>
+  </div>
+  <div class="alert-count-chip chip-Medium">
+    <div class="card-title">Medium-Priority Alerts</div>
+    <div class="count">{{ alert_counts.Medium }}</div>
+  </div>
+  <div class="alert-count-chip chip-Informational">
+    <div class="card-title">Informational Alerts</div>
+    <div class="count">{{ alert_counts.Informational }}</div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Sponsor Performance Distribution</p>
+    <canvas id="perfDonut" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Sponsor Engagement (%)</p>
+    <canvas id="engagementBar" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Incidents by Category</p>
+    <canvas id="incidentCategoryChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Incidents Reported Over Time</p>
+    <canvas id="incidentTrendChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Incident Status Breakdown</p>
+    <canvas id="incidentStatusChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Alerts by Type</p>
+    <canvas id="alertTypeChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Sponsor Performance Summary</p>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Sponsor</th><th>Engagement</th><th>Leads</th><th>Deliverables</th><th>Performance</th></tr>
+    </thead>
+    <tbody>
+      {% for s in sponsors|sort(attribute='performance_score', reverse=True) %}
+      <tr>
+        <td><strong>{{ s.name }}</strong></td>
+        <td>{{ s.engagement_pct }}%</td>
+        <td>{{ s.leads_generated }}</td>
+        <td>{{ s.deliverable_completion_pct }}%</td>
+        <td><span class="pill pill-{{ s.performance_label|replace(' ', '') }}">{{ s.performance_label }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
+<script>
+Chart.defaults.color = '#9aa3c0';
+Chart.defaults.borderColor = '#2a3150';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+const sponsors = {{ sponsors | tojson }};
+const breakdown = {{ performance_breakdown | tojson }};
+const perfColorMap = { 'Excellent': '#34d399', 'Good': '#22d3c5', 'At Risk': '#fb7185' };
+const byCategory = {{ incident_stats.by_category | tojson }};
+const byDate = {{ incident_stats.by_date | tojson }};
+const alertCounts = {{ alert_counts | tojson }};
+
+new Chart(document.getElementById('perfDonut'), {
+  type: 'doughnut',
+  data: { labels: Object.keys(breakdown), datasets: [{ data: Object.values(breakdown), backgroundColor: Object.keys(breakdown).map(k => perfColorMap[k]) }] },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('engagementBar'), {
+  type: 'bar',
+  data: {
+    labels: sponsors.map(s => s.name),
+    datasets: [{ label: 'Engagement %', data: sponsors.map(s => s.engagement_pct), backgroundColor: '#6d5efc', borderRadius: 6 }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 100 } } }
+});
+
+new Chart(document.getElementById('incidentCategoryChart'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(byCategory),
+    datasets: [{ label: 'Incidents', data: Object.values(byCategory), backgroundColor: '#fbbf24', borderRadius: 6 }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('incidentTrendChart'), {
+  type: 'line',
+  data: {
+    labels: Object.keys(byDate),
+    datasets: [{
+      label: 'Incidents Reported', data: Object.values(byDate),
+      borderColor: '#fb7185', backgroundColor: 'rgba(251,113,133,0.15)',
+      fill: true, tension: 0.3, pointBackgroundColor: '#fb7185'
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+});
+
+new Chart(document.getElementById('incidentStatusChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Open', 'In Progress', 'Resolved'],
+    datasets: [{ data: [{{ incident_stats.open }}, {{ incident_stats.in_progress }}, {{ incident_stats.resolved }}], backgroundColor: ['#fb7185', '#fbbf24', '#34d399'] }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('alertTypeChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Critical', 'High', 'Medium', 'Informational'],
+    datasets: [{
+      label: 'Alerts', data: [alertCounts.Critical, alertCounts.High, alertCounts.Medium, alertCounts.Informational],
+      backgroundColor: ['#fb7185', '#fbbf24', '#6d5efc', '#22d3c5'], borderRadius: 6
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endblock %}

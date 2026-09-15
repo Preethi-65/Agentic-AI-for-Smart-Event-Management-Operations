@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Speaker Agent{% endblock %}
+{% block heading %}Speaker Agent{% endblock %}
+
+{% block content %}
+{% if linked_session %}
+<div class="workflow-strip">
+  <span class="workflow-step">Session: {{ linked_session.title }}</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step">Venue: {{ linked_session.venue_name or 'not booked yet' }}</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step current">Speaker Agent</span>
+</div>
+{% endif %}
+
+<div class="tab-nav">
+  <button type="button" class="tab-btn active" data-tab="recommend">Recommend Speaker</button>
+  <button type="button" class="tab-btn" data-tab="directory">Speaker Directory</button>
+</div>
+
+<div id="tab-recommend">
+  <div class="card">
+    <p class="panel-title">Session Requirements</p>
+    <form method="POST" action="{{ url_for('speaker_agent_page') }}">
+      <input type="hidden" name="action" value="recommend">
+      {% if linked_session %}<input type="hidden" name="session_id" value="{{ linked_session.id }}">{% endif %}
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Session Topic</label>
+          <input type="text" name="topic" placeholder="e.g. Machine Learning" required value="{{ form_data.topic or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" name="session_date" required value="{{ form_data.session_date or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Start Time</label>
+          <input type="time" name="start_time" required value="{{ form_data.start_time or '' }}">
+        </div>
+        <div class="form-group">
+          <label>End Time</label>
+          <input type="time" name="end_time" required value="{{ form_data.end_time or '' }}">
+        </div>
+      </div>
+      <button type="submit" class="btn" style="margin-top:8px;">Recommend Speakers</button>
+    </form>
+  </div>
+
+  <div class="section-spacer"></div>
+
+  {% if result %}
+  <div class="card">
+    <p class="panel-title">Ranked Recommendations</p>
+    {% for r in result.ranked %}
+    <div class="rec-card {{ 'rec-best' if loop.first and r.available else '' }} {{ 'rec-conflict' if not r.available else '' }}">
+      <div class="rec-card-head">
+        <div class="rec-name">
+          {{ r.speaker.name }}
+          {% if loop.first and r.available %}<span class="rec-best-badge">Best Match</span>{% endif %}
+          {% if not r.available %}<span class="pill pill-Unavailable" style="margin-left:6px;">Scheduling Conflict</span>{% endif %}
+        </div>
+        <div class="hint">{{ r.speaker.experience_years }} yrs exp · ⭐ {{ r.speaker.rating }}/5</div>
+      </div>
+      <div class="rec-meta">{{ r.speaker.bio }}</div>
+
+      <div class="score-wrap">
+        <span class="score-label">Match Score</span>
+        <div class="score-bar"><div class="score-bar-fill" style="width:{{ r.score }}%;"></div></div>
+        <span class="score-value">{{ r.score }}%</span>
+      </div>
+
+      <div>
+        {% for e in r.speaker.expertise %}<span class="facility-chip {{ 'matched' if e.topic in r.matched_topics else '' }}">{{ e.topic }}</span>{% endfor %}
+      </div>
+
+      <ul class="reasons-list">
+        {% for reason in r.reasons %}
+        <li class="{{ 'bad' if 'conflict' in reason.lower() and not r.available else 'ok' }}">{{ reason }}</li>
+        {% endfor %}
+      </ul>
+
+      {% if linked_session and r.available %}
+      <form method="POST" action="{{ url_for('assign_speaker') }}" style="margin-top:10px;">
+        <input type="hidden" name="session_id" value="{{ linked_session.id }}">
+        <input type="hidden" name="speaker_id" value="{{ r.speaker.id }}">
+        <input type="hidden" name="match_score" value="{{ r.score }}">
+        <input type="hidden" name="reasons" value="{{ r.reasons | join('; ') }}">
+        <button type="submit" class="btn">Assign to Session</button>
+      </form>
+      {% elif not linked_session and r.available %}
+      <p class="hint" style="margin-top:8px;">Create or open a session from the Sessions page to assign this speaker directly.</p>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="hint">No speakers found.</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div id="tab-directory" style="display:none;">
+  <div class="card">
+    <p class="panel-title">Speaker Directory ({{ speakers|length }})</p>
+    <div class="grid grid-2">
+      {% for sp in speakers %}
+      <div class="speaker-mini-card">
+        <div class="rec-card-head">
+          <div class="rec-name">{{ sp.name }}</div>
+          <div class="hint">⭐ {{ sp.rating }}/5 · {{ sp.sessions_count }} sessions</div>
+        </div>
+        <p class="hint">{{ sp.bio }}</p>
+        <div>
+          {% for e in sp.expertise %}
+          <span class="facility-chip {{ 'matched' if e.source != 'Profile' else '' }}" title="{{ e.source }}">{{ e.topic }}</span>
+          {% endfor %}
+        </div>
+        <form method="POST" action="{{ url_for('add_speaker_expertise') }}" style="margin-top:10px; display:flex; gap:8px;">
+          <input type="hidden" name="speaker_id" value="{{ sp.id }}">
+          <input type="hidden" name="redirect_to" value="{{ url_for('speaker_agent_page') }}">
+          <input type="text" name="topic" placeholder="Speaker mentioned a new topic..." style="flex:1;">
+          <button type="submit" class="btn btn-secondary" style="white-space:nowrap;">+ Add Expertise</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-recommend').style.display = btn.dataset.tab === 'recommend' ? 'block' : 'none';
+    document.getElementById('tab-directory').style.display = btn.dataset.tab === 'directory' ? 'block' : 'none';
+  });
+});
+</script>
+{% endblock %}

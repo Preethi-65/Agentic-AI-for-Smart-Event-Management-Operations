@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Speaker Schedule{% endblock %}
+{% block heading %}Speaker Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+  <p class="panel-title">All Speaker Assignments ({{ assignments|length }})</p>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Speaker</th><th>Session</th><th>Topic</th><th>Date</th><th>Time</th><th>Session Status</th></tr>
+    </thead>
+    <tbody>
+      {% for a in assignments %}
+      <tr>
+        <td><strong>{{ a.speaker_name }}</strong> <span class="hint">⭐ {{ a.speaker_rating }}</span></td>
+        <td>{{ a.title }}</td>
+        <td>{{ a.topic }}</td>
+        <td>{{ a.session_date }}</td>
+        <td>{{ a.start_time }}–{{ a.end_time }}</td>
+        <td><span class="pill pill-{{ a.session_status.replace(' ', '') }}">{{ a.session_status }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="hint">No speakers assigned yet. Use the Speaker Agent to recommend and assign speakers to sessions.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Speaker Workload Overview</p>
+  <div class="grid grid-3">
+    {% for sp in speakers %}
+    <div class="speaker-mini-card">
+      <div class="rec-card-head">
+        <div class="rec-name">{{ sp.name }}</div>
+        <div class="hint">⭐ {{ sp.rating }}/5</div>
+      </div>
+      <p class="hint">{{ sp.sessions_count }} total sessions delivered</p>
+      <div>
+        {% for e in sp.expertise %}<span class="facility-chip">{{ e.topic }}</span>{% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+<div class="explain-banner">
+  <strong>Conflict protection:</strong> The Speaker Agent re-checks every speaker's schedule at the moment of
+  assignment. If a speaker is already booked for an overlapping time slot, the assignment is rejected with a
+  "Scheduling Conflict" message and alternative available speakers are suggested instead — so no two sessions
+  in this list ever share the same speaker at overlapping times.
+</div>
+{% endblock %}

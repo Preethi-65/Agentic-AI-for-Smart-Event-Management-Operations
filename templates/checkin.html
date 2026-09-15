@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Check-in Tracker{% endblock %}
+{% block heading %}Check-in Tracker{% endblock %}
+
+{% block content %}
+<div class="two-col">
+  <div class="card">
+    <div class="checkin-box">
+      <p class="panel-title">Scan QR Code or Enter Registration Code</p>
+
+      <div id="qr-reader"></div>
+      <p class="hint" id="qr-status">Point a camera at an attendee's QR code to check them in automatically.</p>
+
+      <form method="POST" action="{{ url_for('checkin') }}" id="manual-checkin-form">
+        <div class="form-group full">
+          <input type="text" name="reg_code" id="reg_code_input" placeholder="e.g. STU-48213" required autofocus>
+        </div>
+        <button type="submit" class="btn" style="margin-top:10px;">Check In Attendee</button>
+      </form>
+
+      {% if result %}
+      <div class="result-card {{ 'result-warning' if result.checked_in and result.checked_in_at else '' }}">
+        <strong>{{ result.full_name }}</strong> · {{ result.reg_code }}<br>
+        <span class="pill pill-{{ result.category }}">{{ result.category }}</span>
+        {% if result.checked_in %}
+        <p class="hint">✅ Checked in at {{ result.checked_in_at }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="panel-title">Live Check-in Summary</p>
+    <div class="grid grid-2">
+      <div>
+        <div class="card-title">Checked In</div>
+        <div class="card-value">{{ stats.checked_in }}</div>
+      </div>
+      <div>
+        <div class="card-title">Remaining</div>
+        <div class="card-value">{{ stats.not_checked_in }}</div>
+      </div>
+    </div>
+    <div class="section-spacer"></div>
+    <p class="panel-title">Recent Check-ins</p>
+    <table>
+      <thead><tr><th>Code</th><th>Name</th><th>Time</th></tr></thead>
+      <tbody>
+        {% for a in recent_checkins %}
+        <tr>
+          <td>{{ a.reg_code }}</td>
+          <td>{{ a.full_name }}</td>
+          <td>{{ a.checked_in_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="hint">No check-ins recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function () {
+  const statusEl = document.getElementById('qr-status');
+  const codeInput = document.getElementById('reg_code_input');
+  let scanning = false;
+  let lastCode = null;
+  let lastScanTime = 0;
+
+  if (typeof Html5Qrcode === 'undefined') {
+    statusEl.textContent = 'QR scanner library failed to load — you can still type the code below.';
+    return;
+  }
+
+  const qr = new Html5Qrcode("qr-reader");
+
+  function extractCode(decodedText) {
+    // QR encodes either a plain code, or a URL like .../checkin/STU-48213
+    const parts = decodedText.split('/').filter(Boolean);
+    return parts[parts.length - 1].toUpperCase();
+  }
+
+  async function onScanSuccess(decodedText) {
+    const code = extractCode(decodedText);
+    const now = Date.now();
+    if (code === lastCode && (now - lastScanTime) < 4000) {
+      return; // debounce repeated frames of the same code
+    }
+    lastCode = code;
+    lastScanTime = now;
+
+    codeInput.value = code;
+    statusEl.textContent = `Scanned ${code} — checking in...`;
+
+    try {
+      const res = await fetch(`/api/checkin/${encodeURIComponent(code)}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.status === 'success') {
+        statusEl.textContent = `✅ ${data.message}`;
+      } else if (data.status === 'already') {
+        statusEl.textContent = `⚠️ Already Checked In — ${data.message}`;
+      } else {
+        statusEl.textContent = `❌ ${data.message}`;
+      }
+      // Refresh the page after a short pause so the summary / recent list update.
+      setTimeout(() => window.location.reload(), 1400);
+    } catch (err) {
+      statusEl.textContent = 'Network error while checking in — try the manual field.';
+    }
+  }
+
+  Html5Qrcode.getCameras().then(devices => {
+    if (devices && devices.length) {
+      scanning = true;
+      qr.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 220 },
+        onScanSuccess
+      ).catch(() => {
+        statusEl.textContent = 'Could not access a camera — you can still type the code below.';
+      });
+    } else {
+      statusEl.textContent = 'No camera detected — enter the registration code manually below.';
+    }
+  }).catch(() => {
+    statusEl.textContent = 'Camera access unavailable — enter the registration code manually below.';
+  });
+})();
+</script>
+{% endblock %}

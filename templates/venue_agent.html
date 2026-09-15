@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Venue Agent{% endblock %}
+{% block heading %}Venue Agent{% endblock %}
+
+{% block content %}
+{% if linked_session %}
+<div class="workflow-strip">
+  <span class="workflow-step">1. Session: {{ linked_session.title }}</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step current">2. Venue Agent</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step">3. Venue Booking</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step">4. Speaker Agent</span>
+</div>
+{% endif %}
+
+<div class="card">
+  <p class="panel-title">Venue Requirements</p>
+  <form method="POST" action="{{ url_for('venue_agent_page') }}">
+    {% if linked_session %}<input type="hidden" name="session_id" value="{{ linked_session.id }}">{% endif %}
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Number of Attendees</label>
+        <input type="number" name="attendees" min="1" required value="{{ form_data.attendees or '' }}">
+      </div>
+      <div class="form-group">
+        <label>Event Type (optional)</label>
+        <input type="text" name="event_type" placeholder="e.g. Workshop, Hackathon" value="{{ form_data.event_type or '' }}">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" name="event_date" required value="{{ form_data.event_date or '' }}">
+      </div>
+      <div class="form-group">
+        <label>Start Time</label>
+        <input type="time" name="start_time" required value="{{ form_data.start_time or '' }}">
+      </div>
+      <div class="form-group">
+        <label>End Time</label>
+        <input type="time" name="end_time" required value="{{ form_data.end_time or '' }}">
+      </div>
+      <div class="form-group">
+        <label>Preferred Location (optional)</label>
+        <input type="text" name="preferred_location" placeholder="e.g. Block B" value="{{ form_data.preferred_location or '' }}">
+      </div>
+      <div class="form-group full">
+        <label>Required Facilities</label>
+        <div class="checkbox-grid">
+          {% for f in facility_options %}
+          <label class="checkbox-item">
+            <input type="checkbox" name="required_facilities" value="{{ f }}"
+              {% if form_data.required_facilities and f in form_data.required_facilities %}checked{% endif %}> {{ f }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <button type="submit" class="btn" style="margin-top:8px;">Find Best Venue</button>
+  </form>
+</div>
+
+<div class="section-spacer"></div>
+
+{% if result %}
+<div class="explain-banner">
+  <strong>Agent decision:</strong> {{ result.explanation }}
+</div>
+
+{% if result.recommended %}
+<div class="card">
+  <p class="panel-title">Recommended Venue</p>
+  {% set r = result.recommended %}
+  <div class="rec-card rec-best">
+    <div class="rec-card-head">
+      <div class="rec-name">{{ r.venue.name }} <span class="rec-best-badge">Best Match</span>
+        {% if r.oversized_alternative %}<span class="pill pill-Unavailable" style="margin-left:6px;">Fallback — smaller halls booked</span>{% endif %}
+      </div>
+      <div>₹{{ "%.0f"|format(r.venue.cost_per_hour) }}/hr</div>
+    </div>
+    <div class="rec-meta">Capacity {{ r.venue.capacity }} · {{ r.venue.location }}</div>
+
+    <div class="score-wrap">
+      <span class="score-label">Match Score</span>
+      <div class="score-bar"><div class="score-bar-fill" style="width:{{ r.score }}%;"></div></div>
+      <span class="score-value">{{ r.score }}%</span>
+    </div>
+
+    <div class="score-wrap">
+      <span class="score-label">Utilization</span>
+      <div class="util-bar"><div class="util-bar-fill {{ 'util-high' if r.utilization > 90 else ('util-low' if r.utilization < 55 else '') }}" style="width:{{ [r.utilization, 100] | min }}%;"></div></div>
+      <span class="score-value">{{ r.utilization }}%</span>
+    </div>
+
+    <div>
+      {% for f in r.matched_facilities %}<span class="facility-chip matched">✓ {{ f }}</span>{% endfor %}
+      {% for f in r.missing_facilities %}<span class="facility-chip missing">✗ {{ f }}</span>{% endfor %}
+    </div>
+
+    <ul class="reasons-list">
+      {% for reason in r.reasons %}
+      <li class="{{ 'ok' if 'Available' in reason or 'Well-sized' in reason or 'all' in reason else ('warn' if 'Larger' in reason or 'Missing' in reason or 'Fallback' in reason or 'Nearly' in reason else 'bad') }}">{{ reason }}</li>
+      {% endfor %}
+    </ul>
+
+    <form method="POST" action="{{ url_for('book_venue') }}" style="margin-top:12px;">
+      <input type="hidden" name="venue_id" value="{{ r.venue.id }}">
+      {% if linked_session %}<input type="hidden" name="session_id" value="{{ linked_session.id }}">{% endif %}
+      <input type="hidden" name="event_date" value="{{ form_data.event_date }}">
+      <input type="hidden" name="start_time" value="{{ form_data.start_time }}">
+      <input type="hidden" name="end_time" value="{{ form_data.end_time }}">
+      <input type="hidden" name="attendees" value="{{ form_data.attendees }}">
+      <input type="hidden" name="label" value="{{ linked_session.title if linked_session else form_data.event_type }}">
+      <button type="submit" class="btn">Book This Venue</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if result.alternatives %}
+<div class="section-spacer"></div>
+<div class="card">
+  <p class="panel-title">Alternative Venues</p>
+  {% for r in result.alternatives %}
+  <div class="rec-card">
+    <div class="rec-card-head">
+      <div class="rec-name">{{ r.venue.name }}</div>
+      <div>₹{{ "%.0f"|format(r.venue.cost_per_hour) }}/hr</div>
+    </div>
+    <div class="rec-meta">Capacity {{ r.venue.capacity }} · {{ r.venue.location }} · Utilization {{ r.utilization }}% · Score {{ r.score }}%</div>
+    <ul class="reasons-list">
+      {% for reason in r.reasons %}<li class="ok">{{ reason }}</li>{% endfor %}
+    </ul>
+    <form method="POST" action="{{ url_for('book_venue') }}" style="margin-top:10px;">
+      <input type="hidden" name="venue_id" value="{{ r.venue.id }}">
+      {% if linked_session %}<input type="hidden" name="session_id" value="{{ linked_session.id }}">{% endif %}
+      <input type="hidden" name="event_date" value="{{ form_data.event_date }}">
+      <input type="hidden" name="start_time" value="{{ form_data.start_time }}">
+      <input type="hidden" name="end_time" value="{{ form_data.end_time }}">
+      <input type="hidden" name="attendees" value="{{ form_data.attendees }}">
+      <input type="hidden" name="label" value="{{ linked_session.title if linked_session else form_data.event_type }}">
+      <button type="submit" class="btn btn-secondary">Book This Venue Instead</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if result.unavailable %}
+<div class="section-spacer"></div>
+<div class="card">
+  <p class="panel-title">Unavailable Venues (Booking Conflicts Detected)</p>
+  {% for r in result.unavailable %}
+  <div class="rec-card rec-conflict">
+    <div class="rec-card-head">
+      <div class="rec-name">{{ r.venue.name }}</div>
+      <span class="pill pill-Unavailable">Unavailable</span>
+    </div>
+    <div class="rec-meta">Capacity {{ r.venue.capacity }} · {{ r.venue.location }}</div>
+    <ul class="reasons-list">
+      {% for reason in r.reasons %}<li class="bad">{{ reason }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

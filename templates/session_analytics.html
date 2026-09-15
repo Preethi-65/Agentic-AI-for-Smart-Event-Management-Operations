@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Session Analytics{% endblock %}
+{% block heading %}Session Analytics{% endblock %}
+
+{% block content %}
+<div class="grid grid-4">
+  <div class="card">
+    <div class="stat-icon icon-purple">📋</div>
+    <div class="card-title">Total Sessions</div>
+    <div class="card-value">{{ summary.total_sessions }}</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-teal">👥</div>
+    <div class="card-title">Avg Attendance Rate</div>
+    <div class="card-value">{{ summary.avg_attendance_rate }}%</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-amber">⭐</div>
+    <div class="card-title">Avg Session Rating</div>
+    <div class="card-value">{{ summary.avg_rating }}/5</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-green">🏛️</div>
+    <div class="card-title">Avg Venue Occupancy</div>
+    <div class="card-value">{{ summary.avg_occupancy }}%</div>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="explain-banner">
+  <strong>How "Most Popular Sessions" is calculated:</strong> Popularity Score = 40% Attendance Rate
+  + 40% Average Rating (scaled to 100) + 20% Feedback Volume. No single metric decides popularity —
+  a well-attended but poorly-rated session will not outrank a smaller, highly-rated one.
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Most Popular Sessions</p>
+    <canvas id="popularChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Peak Attendance Times</p>
+    <canvas id="peakChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Venue Utilization</p>
+    <canvas id="venueUtilChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Speaker Performance (Avg Rating)</p>
+    <canvas id="speakerPerfChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Session-by-Session Breakdown</p>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Session</th><th>Venue</th><th>Speaker</th><th>Registered</th><th>Present</th>
+        <th>Attendance Rate</th><th>Occupancy</th><th>Rating</th><th>Popularity</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in summary.sessions %}
+      <tr>
+        <td>{{ s.title }}</td>
+        <td>{{ s.venue_name or '—' }}</td>
+        <td>{{ s.speaker_name or '—' }}</td>
+        <td>{{ s.attendees_registered or '—' }}</td>
+        <td>{{ s.attendees_present or '—' }}</td>
+        <td>{{ s.attendance_rate }}%</td>
+        <td>{{ s.occupancy_pct }}%</td>
+        <td>{{ s.avg_rating or '—' }}{% if s.avg_rating %}/5{% endif %}</td>
+        <td><strong>{{ s.popularity_score }}</strong></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="hint">No session analytics data yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
+<script>
+const palette = ['#6d5efc', '#22d3c5', '#fbbf24', '#fb7185', '#9aa3c0', '#34d399', '#f472b6', '#60a5fa'];
+Chart.defaults.color = '#9aa3c0';
+Chart.defaults.borderColor = '#2a3150';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+const popular = {{ summary.most_popular | tojson }};
+new Chart(document.getElementById('popularChart'), {
+  type: 'bar',
+  data: {
+    labels: popular.map(s => s.title),
+    datasets: [{ label: 'Popularity Score', data: popular.map(s => s.popularity_score), backgroundColor: '#6d5efc', borderRadius: 6 }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 100 } } }
+});
+
+const peakHours = {{ summary.peak_hours | tojson }};
+new Chart(document.getElementById('peakChart'), {
+  type: 'line',
+  data: {
+    labels: Object.keys(peakHours),
+    datasets: [{
+      label: 'Attendees Present', data: Object.values(peakHours),
+      borderColor: '#22d3c5', backgroundColor: 'rgba(34,211,197,0.15)',
+      fill: true, tension: 0.3, pointBackgroundColor: '#22d3c5'
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+const venueUtil = {{ summary.venue_utilization | tojson }};
+new Chart(document.getElementById('venueUtilChart'), {
+  type: 'bar',
+  data: {
+    labels: venueUtil.map(v => v.venue_name),
+    datasets: [{ label: 'Avg Utilization %', data: venueUtil.map(v => v.avg_utilization), backgroundColor: '#fbbf24', borderRadius: 6 }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100 } } }
+});
+
+const speakerPerf = {{ summary.speaker_performance | tojson }};
+new Chart(document.getElementById('speakerPerfChart'), {
+  type: 'bar',
+  data: {
+    labels: speakerPerf.map(s => s.speaker_name),
+    datasets: [{ label: 'Rating', data: speakerPerf.map(s => s.rating), backgroundColor: '#34d399', borderRadius: 6 }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 5 } } }
+});
+</script>
+{% endblock %}

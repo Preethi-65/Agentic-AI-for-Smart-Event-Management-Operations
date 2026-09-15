@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Agent Orchestration{% endblock %}
+{% block heading %}Agent Orchestration{% endblock %}
+
+{% block content %}
+<div class="explain-banner">
+  <strong>What Agent Orchestration does:</strong> coordinates the existing agents so they act on one trigger instead of
+  independently. Triggering the demo below runs a real, end-to-end "Speaker Cancellation Response" workflow across six
+  agents/modules and writes every step to the audit trail — it is not a documentation-only diagram.
+</div>
+
+<div class="card">
+  <p class="panel-title">Orchestrated Workflow — Speaker Cancellation Response</p>
+  <div class="workflow-steps" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:18px;">
+    <span class="workflow-step">Speaker Agent</span><span class="workflow-arrow">→</span>
+    <span class="workflow-step">Intelligence Engine</span><span class="workflow-arrow">→</span>
+    <span class="workflow-step">Venue Agent</span><span class="workflow-arrow">→</span>
+    <span class="workflow-step">Registration Agent</span><span class="workflow-arrow">→</span>
+    <span class="workflow-step">Incident Agent</span><span class="workflow-arrow">→</span>
+    <span class="workflow-step">Alert System</span><span class="workflow-arrow">→</span>
+    <span class="workflow-step">Executive Dashboard</span>
+  </div>
+
+  <form method="POST" action="{{ url_for('orchestration_page') }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Session to Simulate a Cancellation For</label>
+        <select name="session_id" required>
+          <option value="">Choose a session…</option>
+          {% for s in sessions %}
+          <option value="{{ s.id }}">{{ s.title }} — {{ s.event_name }} ({{ s.speaker_name or 'No speaker assigned' }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Cancellation Reason (optional)</label>
+        <input type="text" name="reason" placeholder="e.g. Speaker had a medical emergency">
+      </div>
+    </div>
+    <button type="submit" class="btn">Run Orchestrated Workflow</button>
+  </form>
+</div>
+
+{% if result and result.ok %}
+<div class="section-spacer"></div>
+<div class="card" style="border-left:4px solid var(--success);">
+  <p class="panel-title">Latest Run Result</p>
+  <div class="grid grid-4">
+    <div><div class="card-title">Incident Created</div><div class="card-value">#{{ result.incident_id }}</div></div>
+    <div><div class="card-title">Alert Raised</div><div class="card-value">#{{ result.alert_id }}</div></div>
+    <div><div class="card-title">Attendees Affected</div><div class="card-value">{{ result.affected_attendees }}</div></div>
+    <div><div class="card-title">Event Health</div><div class="card-value">{{ result.health_before }} → {{ result.health_after }}</div></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Registered Agents</p>
+    {% for a in agents %}
+    <div class="agent-registry-card">
+      <div>
+        <div class="agent-name"><span class="agent-online-dot"></span>{{ a.name }}</div>
+        <div class="agent-domain">{{ a.domain }}</div>
+      </div>
+      <span class="pill pill-Confirmed">M{{ a.milestone }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <p class="panel-title">Orchestration Audit Trail</p>
+    {% if runs %}
+      {% for run in runs %}
+      <div class="orchestration-run">
+        <div class="run-title">{{ run.workflow_name }}</div>
+        <div class="run-meta">Run {{ run.run_id }} · started {{ run.started_at }}</div>
+        {% for step in run.steps %}
+        <div class="orch-step">
+          <div class="orch-step-num">{{ step.step_number }}</div>
+          <div>
+            <div class="orch-step-agent">{{ step.agent_name }}</div>
+            <div class="orch-step-action">{{ step.action }}</div>
+            <div class="orch-step-io"><span class="io-out">→ {{ step.output_summary }}</span></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    {% else %}
+    <p class="muted">No orchestration runs yet — trigger the workflow above to see the audit trail populate here.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

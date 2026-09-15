@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Sponsor Performance{% endblock %}
+{% block heading %}Sponsor Performance Tracking{% endblock %}
+
+{% block content %}
+<div class="grid grid-5">
+  <div class="card">
+    <div class="stat-icon icon-purple">🤝</div>
+    <div class="card-title">Total Sponsors</div>
+    <div class="card-value">{{ stats.total_sponsors }}</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-teal">📈</div>
+    <div class="card-title">Avg Engagement</div>
+    <div class="card-value">{{ stats.avg_engagement }}%</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-amber">🎯</div>
+    <div class="card-title">Total Leads</div>
+    <div class="card-value">{{ stats.total_leads }}</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-green">🔁</div>
+    <div class="card-title">Avg Conversion Rate</div>
+    <div class="card-value">{{ stats.avg_conversion }}%</div>
+  </div>
+  <div class="card">
+    <div class="stat-icon icon-pink">📦</div>
+    <div class="card-title">Pending Deliverables</div>
+    <div class="card-value">{{ stats.pending_deliverables }}</div>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="explain-banner">
+  <strong>How Performance is calculated:</strong> Performance Score = 40% Engagement + 30% Deliverable
+  Completion + 30% Satisfaction (scaled to 100). Score ≥ 82 → Excellent, ≥ 60 → Good, otherwise At Risk.
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Sponsor Engagement (%)</p>
+    <canvas id="engagementChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Leads Generated per Sponsor</p>
+    <canvas id="leadsChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Performance Distribution</p>
+    <canvas id="performanceDonut" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Deliverable Completion (%)</p>
+    <canvas id="deliverableChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Sponsor Performance Dashboard</p>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Sponsor</th><th>Engagement</th><th>Leads</th><th>Deliverables</th><th>Conversion</th><th>Satisfaction</th><th>Performance</th></tr>
+    </thead>
+    <tbody>
+      {% for s in sponsors|sort(attribute='performance_score', reverse=True) %}
+      <tr>
+        <td><strong>{{ s.name }}</strong></td>
+        <td>
+          {{ s.engagement_pct }}%
+          <div class="perf-bar"><div class="perf-bar-fill perf-{{ s.performance_label|replace(' ', '') }}" style="width:{{ s.engagement_pct }}%;"></div></div>
+        </td>
+        <td>{{ s.leads_generated }}</td>
+        <td>{{ s.deliverable_completion_pct }}%</td>
+        <td>{{ s.conversion_rate }}%</td>
+        <td>{{ s.satisfaction_score }}/5</td>
+        <td><span class="pill pill-{{ s.performance_label|replace(' ', '') }}">{{ s.performance_label }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
+<script>
+Chart.defaults.color = '#9aa3c0';
+Chart.defaults.borderColor = '#2a3150';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+const sponsors = {{ sponsors | tojson }};
+
+new Chart(document.getElementById('engagementChart'), {
+  type: 'bar',
+  data: {
+    labels: sponsors.map(s => s.name),
+    datasets: [{ label: 'Engagement %', data: sponsors.map(s => s.engagement_pct), backgroundColor: '#6d5efc', borderRadius: 6 }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 100 } } }
+});
+
+new Chart(document.getElementById('leadsChart'), {
+  type: 'bar',
+  data: {
+    labels: sponsors.map(s => s.name),
+    datasets: [{ label: 'Leads Generated', data: sponsors.map(s => s.leads_generated), backgroundColor: '#22d3c5', borderRadius: 6 }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+const breakdown = {{ performance_breakdown | tojson }};
+const perfColorMap = { 'Excellent': '#34d399', 'Good': '#22d3c5', 'At Risk': '#fb7185' };
+new Chart(document.getElementById('performanceDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(breakdown),
+    datasets: [{ data: Object.values(breakdown), backgroundColor: Object.keys(breakdown).map(k => perfColorMap[k]) }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('deliverableChart'), {
+  type: 'bar',
+  data: {
+    labels: sponsors.map(s => s.name),
+    datasets: [{ label: 'Deliverable Completion %', data: sponsors.map(s => s.deliverable_completion_pct), backgroundColor: '#fbbf24', borderRadius: 6 }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100 } } }
+});
+</script>
+{% endblock %}

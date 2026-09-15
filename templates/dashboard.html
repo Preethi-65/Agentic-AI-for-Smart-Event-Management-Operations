@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}Registration Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-5">
+  <div class="card stat-card">
+    <div class="stat-icon icon-purple">👥</div>
+    <div class="card-title">Total Attendees</div>
+    <div class="card-value">{{ stats.total }}</div>
+    <div class="card-sub">All categories combined</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-icon icon-teal">🆕</div>
+    <div class="card-title">Today's Registrations</div>
+    <div class="card-value">{{ stats.today_count }}</div>
+    <div class="card-sub">Registered today</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-icon icon-green">✅</div>
+    <div class="card-title">Checked-in Attendees</div>
+    <div class="card-value">{{ stats.checked_in }}</div>
+    <div class="card-sub">{{ stats.checkin_pct }}% of total</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-icon icon-amber">⏳</div>
+    <div class="card-title">Pending Check-ins</div>
+    <div class="card-value">{{ stats.not_checked_in }}</div>
+    <div class="card-sub">Registered, not arrived</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-icon icon-pink">🎂</div>
+    <div class="card-title">Average Age</div>
+    <div class="card-value">{{ stats.avg_age }}</div>
+    <div class="card-sub">Years, across all attendees</div>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card countdown-card">
+  {% if next_event %}
+  <p class="panel-title">Upcoming Event Countdown</p>
+  <div class="countdown-row">
+    <div>
+      <div class="countdown-event">{{ next_event.name }}</div>
+      <div class="hint">{{ next_event.venue }} · {{ next_event.event_date }} at {{ next_event.event_time }}</div>
+    </div>
+    <div class="countdown-timer" id="countdown-timer" data-date="{{ next_event.event_date }}" data-time="{{ next_event.event_time }}" data-name="{{ next_event.name }}">
+      Calculating…
+    </div>
+  </div>
+  {% else %}
+  <p class="panel-title">Upcoming Event Countdown</p>
+  <p class="hint">No upcoming events scheduled right now.</p>
+  {% endif %}
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-3">
+  <div class="card">
+    <p class="panel-title">Registration Trend</p>
+    <canvas id="trendChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Age Group Analysis</p>
+    <canvas id="ageChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Registration by City</p>
+    <canvas id="cityChart" height="200"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-3">
+  <div class="card">
+    <p class="panel-title">Daily Registrations</p>
+    <canvas id="dailyChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Event Popularity</p>
+    <canvas id="eventChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Check-in Progress</p>
+    <canvas id="checkinProgressChart" height="200"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="two-col">
+  <div class="card">
+    <p class="panel-title">Recently Registered Attendees</p>
+    <table>
+      <thead>
+        <tr><th>Code</th><th>Name</th><th>Event</th><th>Category</th><th>Checked In</th></tr>
+      </thead>
+      <tbody>
+        {% for a in recent %}
+        <tr>
+          <td>{{ a.reg_code }}</td>
+          <td>{{ a.full_name }}</td>
+          <td>{{ a.event or '—' }}</td>
+          <td><span class="pill pill-{{ a.category }}">{{ a.category }}</span></td>
+          <td>{% if a.checked_in %}<span class="status-yes">Yes</span>{% else %}<span class="status-no">No</span>{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="hint">No attendees registered yet. Go to Registration Agent to add one.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <p class="panel-title">Registration Agent — Activity Log</p>
+    <div class="agent-log">
+      {% for log in logs %}
+      <div class="agent-log-item">
+        {{ log.message }}
+        <div class="ts">{{ log.full_name or 'System' }} · {{ log.created_at }}</div>
+      </div>
+      {% else %}
+      <p class="hint">No agent activity yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Module Overview</p>
+  <div class="grid grid-3">
+    <div>
+      <strong>1. Registration Agent</strong>
+      <p class="hint">Cleans data, infers category &amp; priority, generates unique codes and detects duplicates automatically.</p>
+    </div>
+    <div>
+      <strong>2. Integrated Registration System</strong>
+      <p class="hint">Single shared SQLite data layer keeps every module perfectly in sync in real time.</p>
+    </div>
+    <div>
+      <strong>3. Attendee Analytics</strong>
+      <p class="hint">Visual breakdown of attendees by category, city, event, age, gender and day-wise trend.</p>
+    </div>
+    <div>
+      <strong>4. QR Code Check-in</strong>
+      <p class="hint">Every attendee gets a unique QR code; scanning it at the venue checks them in and blocks duplicates.</p>
+    </div>
+    <div>
+      <strong>5. Event Notification &amp; Reminders</strong>
+      <p class="hint">Automatic confirmation and 3-day / 1-day / day-of reminder emails, fully logged.</p>
+    </div>
+    <div>
+      <strong>6. Registration Dashboard</strong>
+      <p class="hint">This page — a live command-center summarizing the entire event's registration health.</p>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
+<script>
+const palette = ['#6d5efc', '#22d3c5', '#fbbf24', '#fb7185', '#9aa3c0', '#34d399', '#f472b6', '#60a5fa'];
+Chart.defaults.color = '#9aa3c0';
+Chart.defaults.borderColor = '#2a3150';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+const trendData = {{ stats.by_day | tojson }};
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: trendData.map(d => d.day),
+    datasets: [{
+      label: 'Registrations',
+      data: trendData.map(d => d.c),
+      borderColor: '#22d3c5',
+      backgroundColor: 'rgba(34,211,197,0.15)',
+      fill: true, tension: 0.35, pointBackgroundColor: '#22d3c5'
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+const ageData = {{ stats.age_groups | tojson }};
+new Chart(document.getElementById('ageChart'), {
+  type: 'doughnut',
+  data: { labels: Object.keys(ageData), datasets: [{ data: Object.values(ageData), backgroundColor: palette, borderWidth: 0 }] },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10.5 } } } } }
+});
+
+const cityData = {{ stats.by_city | tojson }};
+new Chart(document.getElementById('cityChart'), {
+  type: 'bar',
+  data: { labels: Object.keys(cityData), datasets: [{ label: 'Attendees', data: Object.values(cityData), backgroundColor: '#6d5efc', borderRadius: 6 }] },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('dailyChart'), {
+  type: 'bar',
+  data: {
+    labels: trendData.map(d => d.day),
+    datasets: [{ label: 'Registrations', data: trendData.map(d => d.c), backgroundColor: '#22d3c5', borderRadius: 6 }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+const eventData = {{ stats.by_event | tojson }};
+new Chart(document.getElementById('eventChart'), {
+  type: 'pie',
+  data: { labels: Object.keys(eventData), datasets: [{ data: Object.values(eventData), backgroundColor: palette, borderWidth: 0 }] },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+});
+
+new Chart(document.getElementById('checkinProgressChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Checked In', 'Pending'],
+    datasets: [{ data: [{{ stats.checked_in }}, {{ stats.not_checked_in }}], backgroundColor: ['#34d399', '#2a3150'], borderWidth: 0 }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } }, cutout: '70%' }
+});
+
+// Upcoming Event Countdown
+const timerEl = document.getElementById('countdown-timer');
+if (timerEl) {
+  const target = new Date(`${timerEl.dataset.date}T${timerEl.dataset.time}:00`);
+  const name = timerEl.dataset.name;
+  function tick() {
+    const diff = target - new Date();
+    if (diff <= 0) {
+      timerEl.textContent = `${name} has started!`;
+      return;
+    }
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const mins = Math.floor((diff / (1000 * 60)) % 60);
+    timerEl.textContent = `${name} starts in ${days} Day${days === 1 ? '' : 's'} ${hours} Hour${hours === 1 ? '' : 's'} ${mins} Min${mins === 1 ? '' : 's'}`;
+  }
+  tick();
+  setInterval(tick, 60 * 1000);
+}
+</script>
+{% endblock %}

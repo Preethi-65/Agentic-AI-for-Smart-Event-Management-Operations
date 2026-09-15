@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Error {{ code }}{% endblock %}
+{% block heading %}Error {{ code }}{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align:center; padding:40px 20px;">
+  <div class="stat-icon icon-pink" style="margin:0 auto 16px;">⚠️</div>
+  <h2 style="margin-bottom:8px;">{{ code }} — {{ message }}</h2>
+  <p class="muted">Please go back to the <a href="{{ url_for('dashboard') }}">Dashboard</a> and try again.</p>
+</div>
+{% endblock %}

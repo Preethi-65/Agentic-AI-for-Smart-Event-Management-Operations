@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Sponsorship Agent{% endblock %}
+{% block heading %}Sponsorship Agent{% endblock %}
+
+{% block content %}
+<div class="explain-banner">
+  <strong>What the Sponsorship Agent does:</strong> tracks every sponsor's package, contract, payment,
+  branding and benefits, then automatically detects pending deliverables, engagement leaders and sponsors
+  at risk of not receiving their promised benefits — instead of just storing sponsor records.
+</div>
+
+<div class="card">
+  <p class="panel-title">Agent Insights</p>
+  {% for item in insights %}
+  <div class="insight-card">
+    <div class="insight-q">{{ item.question }}</div>
+    <div class="insight-a">{{ item.answer }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Add New Sponsor</p>
+  <form method="POST" action="{{ url_for('sponsorship_agent_page') }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Sponsor / Company Name</label>
+        <input type="text" name="name" required placeholder="e.g. Acme Corp">
+      </div>
+      <div class="form-group">
+        <label>Sponsorship Package</label>
+        <select name="package">
+          {% for p in packages %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Contact Person</label>
+        <input type="text" name="contact_person" placeholder="e.g. Jane Doe">
+      </div>
+      <div class="form-group">
+        <label>Contact Email</label>
+        <input type="text" name="contact_email" placeholder="e.g. jane@acme.com">
+      </div>
+      <div class="form-group">
+        <label>Contract Status</label>
+        <select name="contract_status">
+          {% for c in contract_statuses %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Payment Status</label>
+        <select name="payment_status">
+          {% for p in payment_statuses %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Payment Amount (₹)</label>
+        <input type="number" name="payment_amount" min="0" step="1000" placeholder="e.g. 150000">
+      </div>
+      <div class="form-group">
+        <label>Branding Status</label>
+        <select name="branding_status">
+          {% for b in branding_statuses %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Engagement (%)</label>
+        <input type="number" name="engagement_pct" min="0" max="100" placeholder="e.g. 75">
+      </div>
+      <div class="form-group">
+        <label>Booth Visits</label>
+        <input type="number" name="booth_visits" min="0" placeholder="e.g. 200">
+      </div>
+      <div class="form-group">
+        <label>Leads Generated</label>
+        <input type="number" name="leads_generated" min="0" placeholder="e.g. 120">
+      </div>
+      <div class="form-group">
+        <label>Session Participation (count)</label>
+        <input type="number" name="session_participation" min="0" placeholder="e.g. 2">
+      </div>
+      <div class="form-group">
+        <label>Social Media Engagement (%)</label>
+        <input type="number" name="social_engagement_pct" min="0" max="100" placeholder="e.g. 55">
+      </div>
+      <div class="form-group">
+        <label>Sponsor Satisfaction (0–5)</label>
+        <input type="number" name="satisfaction_score" min="0" max="5" step="0.1" placeholder="e.g. 4.2">
+      </div>
+      <div class="form-group">
+        <label>Conversion Rate (%)</label>
+        <input type="number" name="conversion_rate" min="0" max="100" step="0.1" placeholder="e.g. 22.5">
+      </div>
+    </div>
+    <button type="submit" class="btn" style="margin-top:8px;">Add Sponsor</button>
+  </form>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <div class="records-header">
+    <p class="panel-title" style="margin:0;">Sponsor Directory ({{ sponsors|length }})</p>
+    <form method="GET" action="{{ url_for('sponsorship_agent_page') }}" style="display:flex; gap:8px;">
+      <input type="text" name="search" placeholder="Search sponsors..." value="{{ search }}">
+      <select name="package" onchange="this.form.submit()">
+        <option value="All" {{ 'selected' if package_filter=='All' }}>All Packages</option>
+        {% for p in packages %}
+        <option value="{{ p }}" {{ 'selected' if package_filter==p }}>{{ p }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn-secondary btn">Filter</button>
+    </form>
+  </div>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Sponsor</th><th>Package</th><th>Contract</th><th>Payment</th><th>Branding</th>
+        <th>Engagement</th><th>Leads</th><th>Deliverables</th><th>Performance</th><th>Add Deliverable</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sponsors %}
+      <tr>
+        <td><strong>{{ s.name }}</strong><div class="hint">{{ s.contact_person or '—' }}</div></td>
+        <td><span class="pill pill-{{ s.package }}">{{ s.package }}</span></td>
+        <td><span class="pill pill-{{ s.contract_status|replace(' ', '') }}">{{ s.contract_status }}</span></td>
+        <td><span class="pill pill-{{ s.payment_status }}">{{ s.payment_status }}</span></td>
+        <td><span class="pill pill-{{ s.branding_status|replace(' ', '') }}">{{ s.branding_status }}</span></td>
+        <td>{{ s.engagement_pct }}%</td>
+        <td>{{ s.leads_generated }}</td>
+        <td>
+          {{ s.deliverables_completed }}/{{ s.deliverables_total }}
+          {% if s.deliverables_pending > 0 %}
+          <span class="pill pill-Pending" style="margin-left:4px;">{{ s.deliverables_pending }} pending</span>
+          {% endif %}
+        </td>
+        <td><span class="pill pill-{{ s.performance_label|replace(' ', '') }}">{{ s.performance_label }}</span></td>
+        <td>
+          <form method="POST" action="{{ url_for('add_sponsor_deliverable', sponsor_id=s.id) }}" style="display:flex; gap:4px; flex-wrap:wrap;">
+            <input type="text" name="deliverable" placeholder="Deliverable" style="min-width:110px; padding:6px 8px; font-size:12px;">
+            <input type="date" name="due_date" style="padding:6px 8px; font-size:12px;">
+            <button type="submit" class="btn-secondary btn" style="padding:6px 10px; font-size:12px;">Add</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10" class="hint">No sponsors match this filter.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

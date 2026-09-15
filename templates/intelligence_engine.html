@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Intelligence Engine{% endblock %}
+{% block heading %}Event Intelligence Engine{% endblock %}
+
+{% block content %}
+<div class="explain-banner">
+  <strong>What the Event Intelligence Engine does:</strong> collects live data from Registration (M1), Venue &amp; Speaker
+  Operations (M2) and Sponsorship &amp; Incident Management (M3), and turns it into a single explainable Event Health
+  Score, a prioritized risk list, and concrete recommendations — all rule-based, all traceable to the metric that
+  produced them.
+</div>
+
+<div class="card">
+  <p class="panel-title">Event Health Score</p>
+  <div class="health-gauge-wrap">
+    <div class="health-score-circle health-{{ intel.event_health_label|replace(' ', '') }}">
+      <div class="score-num">{{ intel.event_health_score }}</div>
+      <div class="score-label">/ 100</div>
+    </div>
+    <div>
+      <span class="pill pill-{{ intel.event_health_label|replace(' ', '') }}" style="font-size:13px;">{{ intel.event_health_label }}</span>
+      <p class="muted" style="margin-top:10px; max-width:520px;">
+        Score starts at 100 and is reduced only by concrete, named factors below — never a black-box number.
+      </p>
+    </div>
+  </div>
+  {% if intel.score_breakdown %}
+  <div style="margin-top:16px;">
+    {% for b in intel.score_breakdown %}
+    <div class="summary-kv"><span>{{ b.reason }}</span><span>{{ b.points }}</span></div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted" style="margin-top:12px;">No penalties applied — nothing is currently reducing the event health score.</p>
+  {% endif %}
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Identified Risks</p>
+    {% for r in intel.risks %}
+    <div class="risk-row">
+      <span class="pill pill-{{ r.level }}">{{ r.level }}</span>
+      <div>
+        <div class="risk-area">{{ r.area }}</div>
+        <div>{{ r.description }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="card">
+    <p class="panel-title">AI Recommendations</p>
+    {% for rec in intel.recommendations %}
+    <div class="rec-item">{{ rec }}</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Event Health Trend</p>
+  {% if history|length > 1 %}
+  <canvas id="healthTrendChart" height="90"></canvas>
+  {% else %}
+  <p class="muted">Trend will populate as more snapshots are recorded — trigger a workflow from Agent Orchestration to add one.</p>
+  {% endif %}
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Cross-Milestone KPI Bundle</p>
+  <div class="grid grid-7">
+    <div><div class="card-title">Registrations</div><div class="card-value">{{ intel.kpis.total_registrations }}</div></div>
+    <div><div class="card-title">Check-in %</div><div class="card-value">{{ intel.kpis.checkin_pct }}%</div></div>
+    <div><div class="card-title">Event Completion</div><div class="card-value">{{ intel.kpis.event_completion_pct }}%</div></div>
+    <div><div class="card-title">Avg Session Rating</div><div class="card-value">{{ intel.kpis.avg_session_rating }}/5</div></div>
+    <div><div class="card-title">Avg Sponsor Engagement</div><div class="card-value">{{ intel.kpis.avg_sponsor_engagement }}%</div></div>
+    <div><div class="card-title">Open Incidents</div><div class="card-value">{{ intel.kpis.open_incidents }}</div></div>
+    <div><div class="card-title">Active Alerts</div><div class="card-value">{{ intel.kpis.active_alerts }}</div></div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
+<script>
+Chart.defaults.color = '#9aa3c0';
+Chart.defaults.borderColor = '#2a3150';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+const history = {{ history | tojson }};
+const trendCanvas = document.getElementById('healthTrendChart');
+if (trendCanvas && history.length > 1) {
+  new Chart(trendCanvas, {
+    type: 'line',
+    data: {
+      labels: history.map(h => h.created_at.slice(0, 16).replace('T', ' ')),
+      datasets: [{
+        label: 'Event Health Score', data: history.map(h => h.event_health_score),
+        borderColor: '#6d5efc', backgroundColor: 'rgba(109,94,252,0.15)',
+        fill: true, tension: 0.3, pointBackgroundColor: '#6d5efc'
+      }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } }
+  });
+}
+</script>
+{% endblock %}

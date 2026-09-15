@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Registration Intelligence{% endblock %} | Agentic AI for Smart Event Management</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">AI</div>
+      <div>
+        <div class="brand-title">Agentic AI · SEMO</div>
+        <div class="brand-sub">Smart Event Management Operations</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if active_page=='dashboard' }}">
+        <span class="dot"></span> Dashboard
+      </a>
+      <a href="{{ url_for('register') }}" class="nav-link {{ 'active' if active_page=='register' }}">
+        <span class="dot"></span> Registration Agent
+      </a>
+      <a href="{{ url_for('attendees') }}" class="nav-link {{ 'active' if active_page=='attendees' }}">
+        <span class="dot"></span> Attendee Records
+      </a>
+      <a href="{{ url_for('analytics') }}" class="nav-link {{ 'active' if active_page=='analytics' }}">
+        <span class="dot"></span> Attendee Analytics
+      </a>
+      <a href="{{ url_for('checkin') }}" class="nav-link {{ 'active' if active_page=='checkin' }}">
+        <span class="dot"></span> Check-in Tracker
+      </a>
+      <a href="{{ url_for('notifications_page') }}" class="nav-link {{ 'active' if active_page=='notifications' }}">
+        <span class="dot"></span> Notifications
+      </a>
+
+      <div class="nav-section-label">Milestone 2 — Agentic AI for Smart Event Management</div>
+      <a href="{{ url_for('sessions') }}" class="nav-link {{ 'active' if active_page=='sessions' }}">
+        <span class="dot"></span> Sessions &amp; Schedule
+      </a>
+      <a href="{{ url_for('venues') }}" class="nav-link {{ 'active' if active_page=='venues' }}">
+        <span class="dot"></span> Venues
+      </a>
+      <a href="{{ url_for('venue_agent_page') }}" class="nav-link {{ 'active' if active_page=='venue_agent' }}">
+        <span class="dot"></span> Venue Agent
+      </a>
+      <a href="{{ url_for('speaker_agent_page') }}" class="nav-link {{ 'active' if active_page=='speaker_agent' }}">
+        <span class="dot"></span> Speaker Agent
+      </a>
+      <a href="{{ url_for('speaker_schedule') }}" class="nav-link {{ 'active' if active_page=='speaker_schedule' }}">
+        <span class="dot"></span> Speaker Schedule
+      </a>
+      <a href="{{ url_for('session_analytics') }}" class="nav-link {{ 'active' if active_page=='session_analytics' }}">
+        <span class="dot"></span> Session Analytics
+      </a>
+
+      <div class="nav-section-label">Milestone 3 — Sponsorship &amp; Incident Management</div>
+      <a href="{{ url_for('milestone3_dashboard') }}" class="nav-link {{ 'active' if active_page=='milestone3_dashboard' }}">
+        <span class="dot"></span> Milestone 3 Dashboard
+      </a>
+      <a href="{{ url_for('sponsorship_agent_page') }}" class="nav-link {{ 'active' if active_page=='sponsorship_agent' }}">
+        <span class="dot"></span> Sponsorship Agent
+      </a>
+      <a href="{{ url_for('sponsor_performance') }}" class="nav-link {{ 'active' if active_page=='sponsor_performance' }}">
+        <span class="dot"></span> Sponsor Performance
+      </a>
+      <a href="{{ url_for('incident_agent_page') }}" class="nav-link {{ 'active' if active_page=='incident_agent' }}">
+        <span class="dot"></span> Incident Agent
+      </a>
+      <a href="{{ url_for('alerts_center') }}" class="nav-link {{ 'active' if active_page=='alerts' }}">
+        <span class="dot"></span> Alerts Center
+      </a>
+
+      <div class="nav-section-label nav-section-current">Milestone 4 (Current) — Event Intelligence &amp; Enterprise Deployment</div>
+      <a href="{{ url_for('intelligence_engine_page') }}" class="nav-link {{ 'active' if active_page=='intelligence_engine' }}">
+        <span class="dot"></span> 1. Event Intelligence Engine
+      </a>
+      <a href="{{ url_for('executive_dashboard') }}" class="nav-link {{ 'active' if active_page=='executive_dashboard' }}">
+        <span class="dot"></span> 2. Executive Dashboard
+      </a>
+      <a href="{{ url_for('orchestration_page') }}" class="nav-link {{ 'active' if active_page=='orchestration' }}">
+        <span class="dot"></span> 3. Agent Orchestration
+      </a>
+      <a href="{{ url_for('testing_center') }}" class="nav-link {{ 'active' if active_page=='testing_center' }}">
+        <span class="dot"></span> 4. End-to-End Testing
+      </a>
+      <a href="{{ url_for('production_readiness_page') }}" class="nav-link {{ 'active' if active_page=='production_readiness' }}">
+        <span class="dot"></span> 5. Production Deployment
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <p>Agentic AI for Smart Event Management Operations</p>
+      <p class="muted">Milestone 1: Registration Intelligence · Milestone 2: Venue &amp; Speaker Ops · Milestone 3: Sponsorship &amp; Incident Management · Milestone 4: Event Intelligence &amp; Enterprise Deployment</p>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <h1>{% block heading %}Dashboard{% endblock %}</h1>
+      <div class="topbar-right">
+        <span class="badge-live">● System Online</span>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <section class="page-body">
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+</div>
+</body>
+</html>

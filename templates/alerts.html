@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Alerts Center{% endblock %}
+{% block heading %}Incident Alert System — Alert Center{% endblock %}
+
+{% block content %}
+<div class="alert-summary-strip">
+  <div class="alert-count-chip chip-Critical">
+    <div class="card-title">Critical</div>
+    <div class="count">{{ counts.Critical }}</div>
+  </div>
+  <div class="alert-count-chip chip-High">
+    <div class="card-title">High-Priority</div>
+    <div class="count">{{ counts.High }}</div>
+  </div>
+  <div class="alert-count-chip chip-Medium">
+    <div class="card-title">Medium-Priority</div>
+    <div class="count">{{ counts.Medium }}</div>
+  </div>
+  <div class="alert-count-chip chip-Informational">
+    <div class="card-title">Informational</div>
+    <div class="count">{{ counts.Informational }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="records-header">
+    <p class="panel-title" style="margin:0;">All Alerts ({{ alerts|length }})</p>
+    <form method="GET" action="{{ url_for('alerts_center') }}" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <select name="alert_type" onchange="this.form.submit()">
+        <option value="All" {{ 'selected' if alert_type_filter=='All' }}>All Types</option>
+        <option value="Critical" {{ 'selected' if alert_type_filter=='Critical' }}>Critical</option>
+        <option value="High" {{ 'selected' if alert_type_filter=='High' }}>High-Priority</option>
+        <option value="Medium" {{ 'selected' if alert_type_filter=='Medium' }}>Medium-Priority</option>
+        <option value="Informational" {{ 'selected' if alert_type_filter=='Informational' }}>Informational</option>
+      </select>
+      <select name="status" onchange="this.form.submit()">
+        <option value="All" {{ 'selected' if status_filter=='All' }}>All Status</option>
+        <option value="Active" {{ 'selected' if status_filter=='Active' }}>Active</option>
+        <option value="Acknowledged" {{ 'selected' if status_filter=='Acknowledged' }}>Acknowledged</option>
+        <option value="Resolved" {{ 'selected' if status_filter=='Resolved' }}>Resolved</option>
+      </select>
+      <button type="submit" class="btn-secondary btn">Filter</button>
+    </form>
+  </div>
+
+  {% for a in alerts %}
+  <div class="alert-card alert-{{ a.alert_type }}">
+    <div class="alert-card-head">
+      <div>
+        <span class="pill pill-{{ a.alert_type }}">{{ a.alert_type }}</span>
+        <span class="pill pill-{{ a.category }}" style="background:rgba(154,163,192,0.12); color:var(--text-dim);">{{ a.category }}</span>
+        <span class="alert-title">{{ a.title }}</span>
+      </div>
+      <span class="pill pill-{{ a.status }}">{{ a.status }}</span>
+    </div>
+    {% if a.description %}<div class="alert-desc">{{ a.description }}</div>{% endif %}
+    {% if a.recommended_action %}
+    <div class="alert-action"><strong>Recommended action:</strong> {{ a.recommended_action }}</div>
+    {% endif %}
+    <div class="alert-meta">Raised {{ a.created_at[:16] }}</div>
+    {% if a.status != 'Resolved' %}
+    <div style="display:flex; gap:6px; margin-top:10px;">
+      {% if a.status == 'Active' %}
+      <form method="POST" action="{{ url_for('update_alert_status', alert_id=a.id) }}">
+        <input type="hidden" name="status" value="Acknowledged">
+        <button type="submit" class="btn-secondary btn" style="padding:6px 10px; font-size:12px;">Acknowledge</button>
+      </form>
+      {% endif %}
+      <form method="POST" action="{{ url_for('update_alert_status', alert_id=a.id) }}">
+        <input type="hidden" name="status" value="Resolved">
+        <button type="submit" class="btn-secondary btn" style="padding:6px 10px; font-size:12px;">Resolve</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="hint">No alerts match this filter.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Attendee Records{% endblock %}
+{% block heading %}Integrated Registration System{% endblock %}
+
+{% macro sort_link(col, label) %}
+  {% set next_dir = 'asc' if (sort_by == col and sort_dir == 'desc') else 'desc' %}
+  <a class="sort-link" href="{{ url_for('attendees', search=search, category=selected_category, checked_in=checked_in, event=selected_event, sort_by=col, sort_dir=next_dir, page=1) }}">
+    {{ label }}{% if sort_by == col %}{{ ' ▲' if sort_dir == 'asc' else ' ▼' }}{% endif %}
+  </a>
+{% endmacro %}
+
+{% block content %}
+<div class="card">
+  <div class="records-header">
+    <p class="panel-title">All Attendee Records ({{ total }})</p>
+    <a class="btn btn-secondary"
+       href="{{ url_for('export_attendees_csv', search=search, category=selected_category, checked_in=checked_in, event=selected_event, sort_by=sort_by, sort_dir=sort_dir) }}">
+      ⬇ Export to CSV
+    </a>
+  </div>
+
+  <form method="GET" action="{{ url_for('attendees') }}" class="filters">
+    <input type="text" name="search" placeholder="Search name, email, phone or code..." value="{{ search }}">
+    <select name="category">
+      {% for c in categories %}
+      <option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+    <select name="event">
+      <option value="All" {% if selected_event == 'All' %}selected{% endif %}>All events</option>
+      {% for e in events %}
+      <option value="{{ e.name }}" {% if selected_event == e.name %}selected{% endif %}>{{ e.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="checked_in">
+      <option value="" {% if checked_in == '' %}selected{% endif %}>All statuses</option>
+      <option value="1" {% if checked_in == '1' %}selected{% endif %}>Checked in</option>
+      <option value="0" {% if checked_in == '0' %}selected{% endif %}>Not checked in</option>
+    </select>
+    <input type="hidden" name="sort_by" value="{{ sort_by }}">
+    <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
+    <button type="submit" class="btn btn-secondary">Apply Filters</button>
+  </form>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>{{ sort_link('name', 'Name') }}</th>
+        <th>{{ sort_link('email', 'Email') }}</th>
+        <th>Phone</th>
+        <th>{{ sort_link('age', 'Age') }}</th>
+        <th>Gender</th>
+        <th>{{ sort_link('city', 'City') }}</th>
+        <th>{{ sort_link('event', 'Event') }}</th>
+        <th>{{ sort_link('registered_at', 'Registration Date') }}</th>
+        <th>{{ sort_link('checked_in', 'Check-in Status') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in records %}
+      <tr>
+        <td>{{ a.reg_code }}</td>
+        <td>{{ a.full_name }}</td>
+        <td>{{ a.email }}</td>
+        <td>{{ a.phone or '—' }}</td>
+        <td>{{ a.age or '—' }}</td>
+        <td>{{ a.gender or '—' }}</td>
+        <td>{{ a.city or '—' }}</td>
+        <td>{{ a.event or '—' }}</td>
+        <td>{{ a.registered_at }}</td>
+        <td>{% if a.checked_in %}<span class="status-yes">Checked In</span>{% else %}<span class="status-no">Not Checked In</span>{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10" class="hint">No matching attendee records found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    <a class="btn btn-secondary {{ 'disabled' if page <= 1 }}"
+       href="{{ url_for('attendees', search=search, category=selected_category, checked_in=checked_in, event=selected_event, sort_by=sort_by, sort_dir=sort_dir, page=page-1) }}">‹ Prev</a>
+    <span class="hint">Page {{ page }} of {{ total_pages }}</span>
+    <a class="btn btn-secondary {{ 'disabled' if page >= total_pages }}"
+       href="{{ url_for('attendees', search=search, category=selected_category, checked_in=checked_in, event=selected_event, sort_by=sort_by, sort_dir=sort_dir, page=page+1) }}">Next ›</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

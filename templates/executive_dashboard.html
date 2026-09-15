@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Executive Dashboard{% endblock %}
+{% block heading %}Executive Dashboard{% endblock %}
+
+{% block content %}
+<div class="explain-banner">
+  <strong>Executive view:</strong> a high-level summary for senior management — "How is my event performing?" — not
+  every operational detail. For the operational view, see the Milestone 3 Dashboard, Session Analytics or Attendee
+  Analytics pages.
+</div>
+
+<div class="card">
+  <div class="health-gauge-wrap">
+    <div class="health-score-circle health-{{ intel.event_health_label|replace(' ', '') }}">
+      <div class="score-num">{{ intel.event_health_score }}</div>
+      <div class="score-label">/ 100</div>
+    </div>
+    <div>
+      <p class="panel-title" style="margin-bottom:6px;">Overall Event Health</p>
+      <span class="pill pill-{{ intel.event_health_label|replace(' ', '') }}" style="font-size:13px;">{{ intel.event_health_label }}</span>
+      <p class="muted" style="margin-top:10px; max-width:560px;">
+        Computed live by the Event Intelligence Engine from Registration, Venue &amp; Speaker, and Sponsorship &amp;
+        Incident data. See the <a href="{{ url_for('intelligence_engine_page') }}">Intelligence Engine</a> page for the full breakdown.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<p class="panel-title">Event Overview</p>
+<div class="grid grid-6">
+  <div class="card"><div class="stat-icon icon-purple">👥</div><div class="card-title">Total Registrations</div><div class="card-value">{{ attendee_stats.total }}</div></div>
+  <div class="card"><div class="stat-icon icon-teal">✅</div><div class="card-title">Checked In</div><div class="card-value">{{ attendee_stats.checked_in }}</div><div class="card-sub">{{ attendee_stats.checkin_pct }}% attendance rate</div></div>
+  <div class="card"><div class="stat-icon icon-green">🗓️</div><div class="card-title">Sessions Conducted</div><div class="card-value">{{ intel.kpis.sessions_conducted }}/{{ intel.kpis.total_sessions }}</div></div>
+  <div class="card"><div class="stat-icon icon-amber">📊</div><div class="card-title">Event Completion</div><div class="card-value">{{ intel.kpis.event_completion_pct }}%</div></div>
+  <div class="card"><div class="stat-icon icon-pink">⭐</div><div class="card-title">Avg Session Rating</div><div class="card-value">{{ intel.kpis.avg_session_rating }}/5</div></div>
+  <div class="card"><div class="stat-icon icon-purple">🏟️</div><div class="card-title">Avg Venue Occupancy</div><div class="card-value">{{ intel.kpis.avg_venue_occupancy }}%</div></div>
+</div>
+
+<div class="section-spacer"></div>
+
+<p class="panel-title">Sponsor &amp; Incident Performance</p>
+<div class="grid grid-6">
+  <div class="card"><div class="stat-icon icon-teal">🤝</div><div class="card-title">Total Sponsors</div><div class="card-value">{{ intel.kpis.total_sponsors }}</div></div>
+  <div class="card"><div class="stat-icon icon-green">📈</div><div class="card-title">Avg Sponsor Engagement</div><div class="card-value">{{ intel.kpis.avg_sponsor_engagement }}%</div></div>
+  <div class="card"><div class="stat-icon icon-amber">📦</div><div class="card-title">Pending Deliverables</div><div class="card-value">{{ intel.kpis.pending_deliverables }}</div></div>
+  <div class="card"><div class="stat-icon icon-pink">⚠️</div><div class="card-title">Sponsors At Risk</div><div class="card-value">{{ intel.kpis.sponsors_at_risk }}</div></div>
+  <div class="card"><div class="stat-icon icon-purple">🚨</div><div class="card-title">Open Incidents</div><div class="card-value">{{ intel.kpis.open_incidents }}</div></div>
+  <div class="card"><div class="stat-icon icon-teal">🔴</div><div class="card-title">Critical / High</div><div class="card-value">{{ intel.kpis.critical_incidents }} / {{ intel.kpis.high_incidents }}</div></div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Top Risks</p>
+    {% for r in intel.risks[:4] %}
+    <div class="risk-row">
+      <span class="pill pill-{{ r.level }}">{{ r.level }}</span>
+      <div><div class="risk-area">{{ r.area }}</div><div>{{ r.description }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="card">
+    <p class="panel-title">AI-Generated Recommendations</p>
+    {% for rec in intel.recommendations[:5] %}
+    <div class="rec-item">{{ rec }}</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Sponsor Performance Distribution</p>
+    <canvas id="execPerfDonut" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Event Health Trend</p>
+    {% if history|length > 1 %}
+    <canvas id="execHealthTrend" height="220"></canvas>
+    {% else %}
+    <p class="muted">Trend builds up as intelligence snapshots are recorded (e.g. via Agent Orchestration runs).</p>
+    {% endif %}
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
+<script>
+Chart.defaults.color = '#9aa3c0';
+Chart.defaults.borderColor = '#2a3150';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+const sponsors = {{ m3.sponsor_performance | tojson }};
+// Fixed, explicit label/color pairing (not a dynamic object-key lookup)
+// so backgroundColor can never end up undefined for a segment -- an
+// undefined/invalid Chart.js color is what causes segments to render
+// solid black instead of their intended color.
+const perfLabels = ['Excellent', 'Good', 'At Risk'];
+const perfColors = ['#34d399', '#22d3c5', '#fb7185']; // green / cyan-teal / pink-red
+const perfCounts = perfLabels.map(
+  label => sponsors.filter(s => s.performance_label === label).length
+);
+
+new Chart(document.getElementById('execPerfDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: perfLabels,
+    datasets: [{
+      data: perfCounts,
+      backgroundColor: perfColors,
+      borderColor: '#1b2140',
+      borderWidth: 2,
+    }],
+  },
+  options: { plugins: { legend: { position: 'bottom' } } },
+});
+
+const history = {{ history | tojson }};
+const trendCanvas = document.getElementById('execHealthTrend');
+if (trendCanvas && history.length > 1) {
+  new Chart(trendCanvas, {
+    type: 'line',
+    data: {
+      labels: history.map(h => h.created_at.slice(0, 16).replace('T', ' ')),
+      datasets: [{
+        label: 'Event Health Score', data: history.map(h => h.event_health_score),
+        borderColor: '#6d5efc', backgroundColor: 'rgba(109,94,252,0.15)',
+        fill: true, tension: 0.3, pointBackgroundColor: '#6d5efc'
+      }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } }
+  });
+}
+</script>
+{% endblock %}

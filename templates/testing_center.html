@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Testing Center{% endblock %}
+{% block heading %}End-to-End Testing Center{% endblock %}
+
+{% block content %}
+<div class="explain-banner">
+  <strong>What the Testing Center does:</strong> actually executes the project's automated test suite
+  (tests/test_milestone4.py) as a live subprocess against the real running application and stores the result — this
+  is not a static "tests pass" claim. Press "Run Full Test Suite" to trigger a fresh run right now.
+</div>
+
+<div class="card">
+  <p class="panel-title">Run the Automated Suite</p>
+  <p class="muted" style="margin-bottom:12px;">Covers Functional, Integration, AI/Agent, API, Workflow/Orchestration, Dashboard, Performance, Security, Error Handling and User Acceptance categories — 20 tests / 28 sub-checks.</p>
+  <form method="POST" action="{{ url_for('testing_center') }}">
+    <button type="submit" class="btn">Run Full Test Suite</button>
+  </form>
+</div>
+
+<div class="section-spacer"></div>
+
+{% if latest %}
+<div class="card" style="border-left:4px solid {{ 'var(--success)' if latest.failed == 0 and latest.errors == 0 else 'var(--error)' }};">
+  <p class="panel-title">Latest Run — {{ latest.created_at }} ({{ latest.triggered_by }})</p>
+  <div class="grid grid-4">
+    <div><div class="card-title">Total</div><div class="card-value">{{ latest.total }}</div></div>
+    <div><div class="card-title">Passed</div><div class="card-value" style="color:var(--success);">{{ latest.passed }}</div></div>
+    <div><div class="card-title">Failed / Errors</div><div class="card-value" style="color:var(--error);">{{ latest.failed + latest.errors }}</div></div>
+    <div><div class="card-title">Duration</div><div class="card-value">{{ latest.duration_seconds }}s</div></div>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Results by Testing Category</p>
+  {% for cat, stats in category_results.items() %}
+  <div class="risk-row">
+    <span class="pill {{ 'pill-Healthy' if stats.failed == 0 else 'pill-AtRisk' }}">{{ stats.passed }}/{{ stats.total }}</span>
+    <div><div class="risk-area">{{ cat }}</div><div>{{ 'All checks passed' if stats.failed == 0 else stats.failed ~ ' check(s) failed' }}</div></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Run History</p>
+  <table>
+    <thead><tr><th>Run Time</th><th>Triggered By</th><th>Total</th><th>Passed</th><th>Failed</th><th>Duration</th></tr></thead>
+    <tbody>
+      {% for h in history %}
+      <tr>
+        <td>{{ h.created_at }}</td>
+        <td>{{ h.triggered_by }}</td>
+        <td>{{ h.total }}</td>
+        <td style="color:var(--success);">{{ h.passed }}</td>
+        <td style="color:{{ 'var(--error)' if (h.failed + h.errors) > 0 else 'var(--text-dim)' }};">{{ h.failed + h.errors }}</td>
+        <td>{{ h.duration_seconds }}s</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Raw pytest Output (latest run, tail)</p>
+  <pre style="white-space:pre-wrap; font-size:12px; color:var(--text-dim); max-height:420px; overflow:auto; background:var(--panel-2); padding:14px; border-radius:10px;">{{ latest.raw_output }}</pre>
+</div>
+{% else %}
+<div class="card">
+  <p class="muted">No test run recorded yet. Click "Run Full Test Suite" above to execute the suite now.</p>
+</div>
+{% endif %}
+{% endblock %}

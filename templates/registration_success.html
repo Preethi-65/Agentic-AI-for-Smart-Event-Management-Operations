@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Registration Successful{% endblock %}
+{% block heading %}Registration Confirmed{% endblock %}
+
+{% block content %}
+<div class="success-wrap">
+  <div class="success-banner">
+    <div class="success-check">✓</div>
+    <div>
+      <p class="success-title">You're all set, {{ attendee.full_name.split(' ')[0] }}!</p>
+      <p class="hint">A confirmation email with your QR code has been sent to {{ attendee.email }}.</p>
+    </div>
+  </div>
+
+  <div class="confirm-card">
+    <div class="confirm-details">
+      <p class="panel-title">Attendee Details</p>
+      <dl class="detail-list">
+        <div><dt>Name</dt><dd>{{ attendee.full_name }}</dd></div>
+        <div><dt>Email</dt><dd>{{ attendee.email }}</dd></div>
+        <div><dt>Phone Number</dt><dd>{{ attendee.phone or '—' }}</dd></div>
+        <div><dt>Age</dt><dd>{{ attendee.age }}</dd></div>
+        <div><dt>Gender</dt><dd>{{ attendee.gender or '—' }}</dd></div>
+        <div><dt>Organization</dt><dd>{{ attendee.organization or '—' }}</dd></div>
+        <div><dt>City</dt><dd>{{ attendee.city or '—' }}</dd></div>
+        <div><dt>Category</dt><dd><span class="pill pill-{{ attendee.category }}">{{ attendee.category }}</span></dd></div>
+        <div><dt>Event</dt><dd>{{ attendee.event or '—' }}{% if event %} <span class="hint">({{ event.event_date }} · {{ event.event_time }} · {{ event.venue }})</span>{% endif %}</dd></div>
+        <div><dt>Registration Date &amp; Time</dt><dd>{{ attendee.registered_at }}</dd></div>
+        <div><dt>Registration ID</dt><dd class="reg-code">{{ attendee.reg_code }}</dd></div>
+        <div><dt>Check-in Status</dt><dd>{% if attendee.checked_in %}<span class="status-yes">Checked In</span>{% else %}<span class="status-no">Not Checked In</span>{% endif %}</dd></div>
+      </dl>
+    </div>
+
+    <div class="confirm-qr">
+      <p class="panel-title">Your Entry QR Code</p>
+      {% if attendee.qr_path %}
+      <div class="qr-box">
+        <img src="{{ url_for('static', filename=attendee.qr_path.split('static/')[-1]) }}" alt="QR code for {{ attendee.reg_code }}">
+      </div>
+      {% else %}
+      <p class="hint">QR code could not be generated.</p>
+      {% endif %}
+      <p class="hint">Scan this at the venue to check in instantly.</p>
+      <p class="reg-code-sub">{{ attendee.reg_code }}</p>
+    </div>
+  </div>
+
+  <div class="success-actions">
+    <a href="{{ url_for('register') }}" class="btn btn-secondary">Register Another Attendee</a>
+    <a href="{{ url_for('attendees') }}" class="btn">View Attendee Records</a>
+  </div>
+</div>
+{% endblock %}

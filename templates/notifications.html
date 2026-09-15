@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block heading %}Event Notification &amp; Reminder System{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="records-header">
+    <p class="panel-title">How it works</p>
+  </div>
+  <p class="hint">
+    Every attendee automatically receives a registration confirmation email (event name, date,
+    time, venue, registration ID and QR code) the moment they register. A background scheduler
+    also sends automatic reminder emails <b>3 days before</b>, <b>1 day before</b>, and
+    <b>on the day</b> of their event — each attendee is reminded at most once per stage.
+  </p>
+  <div class="smtp-status {{ 'smtp-on' if smtp_enabled else 'smtp-off' }}">
+    {% if smtp_enabled %}
+      ● SMTP is configured — emails are being sent for real.
+    {% else %}
+      ● SMTP not configured — running in simulation mode. Every email is fully composed and
+      logged below, but not delivered. Add credentials to <code>smtp_config.py</code> to go live.
+    {% endif %}
+  </div>
+  <form method="POST" action="{{ url_for('send_reminders_now') }}" style="margin-top:14px;">
+    <button type="submit" class="btn">Check &amp; Send Due Reminders Now</button>
+  </form>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Notification Log</p>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Type</th><th>Attendee</th><th>Code</th><th>Status</th><th>Note</th><th>Time</th></tr>
+    </thead>
+    <tbody>
+      {% for n in log %}
+      <tr>
+        <td>{{ n.notif_type.replace('_', ' ').title() }}</td>
+        <td>{{ n.full_name or '—' }}</td>
+        <td>{{ n.reg_code or '—' }}</td>
+        <td>{% if n.success %}<span class="status-yes">Sent</span>{% else %}<span class="status-no">Simulated</span>{% endif %}</td>
+        <td class="hint">{{ n.note }}</td>
+        <td>{{ n.created_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="hint">No notifications sent yet — register an attendee to see the confirmation email logged here.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

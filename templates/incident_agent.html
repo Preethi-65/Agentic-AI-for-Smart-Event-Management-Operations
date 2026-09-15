@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Incident Agent{% endblock %}
+{% block heading %}Incident Agent{% endblock %}
+
+{% block content %}
+<div class="explain-banner">
+  <strong>What the Incident Agent does:</strong> identifies, classifies and prioritizes event incidents
+  automatically — assigning severity, priority, the responsible team and a recommended action, so
+  organizers spend less time on manual triage.
+</div>
+
+{% if escalations %}
+<div class="escalation-banner">
+  <strong>⚠ Escalation needed:</strong>
+  {{ escalations|length }} incident(s) have remained unresolved past their escalation window:
+  {{ escalations|map(attribute='title')|join(', ') }}.
+</div>
+{% endif %}
+
+<div class="card">
+  <p class="panel-title">Operational Recommendations</p>
+  <ul class="reasons-list">
+    {% for r in recommendations %}
+    <li class="{{ 'bad' if 'escalat' in r or 'Critical' in r else ('warn' if 'High' in r else 'ok') }}">{{ r }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Report a New Incident</p>
+  <form method="POST" action="{{ url_for('incident_agent_page') }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Incident Title</label>
+        <input type="text" name="title" required placeholder="e.g. Microphone not working in Hall A">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select name="category">
+          {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Affected Area</label>
+        <input type="text" name="affected_area" required placeholder="e.g. Hall A">
+      </div>
+      <div class="form-group">
+        <label>Minutes Until Next Session (optional)</label>
+        <input type="number" name="minutes_to_next_session" min="0" placeholder="e.g. 10">
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <input type="text" name="description" placeholder="e.g. Handheld mic stopped working, next session starts in 10 minutes">
+      </div>
+    </div>
+    <button type="submit" class="btn" style="margin-top:8px;">Report &amp; Classify Incident</button>
+  </form>
+</div>
+
+{% if classification_result %}
+<div class="section-spacer"></div>
+<div class="explain-banner">
+  <strong>Agent decision for "{{ classification_result.title }}"</strong> ({{ classification_result.affected_area }}):
+  Category: {{ classification_result.category }} · Severity: {{ classification_result.severity }} ·
+  Priority: {{ classification_result.priority }} · Responsible Team: {{ classification_result.responsible_team }} ·
+  Recommended Action: {{ classification_result.recommended_action }}
+</div>
+{% endif %}
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <div class="records-header">
+    <p class="panel-title" style="margin:0;">Incident Log ({{ incidents|length }})</p>
+    <form method="GET" action="{{ url_for('incident_agent_page') }}" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <input type="text" name="search" placeholder="Search incidents..." value="{{ search }}">
+      <select name="status" onchange="this.form.submit()">
+        <option value="All" {{ 'selected' if status_filter=='All' }}>All Status</option>
+        <option value="Open" {{ 'selected' if status_filter=='Open' }}>Open</option>
+        <option value="In Progress" {{ 'selected' if status_filter=='In Progress' }}>In Progress</option>
+        <option value="Resolved" {{ 'selected' if status_filter=='Resolved' }}>Resolved</option>
+      </select>
+      <select name="priority" onchange="this.form.submit()">
+        <option value="All" {{ 'selected' if priority_filter=='All' }}>All Priority</option>
+        <option value="Critical" {{ 'selected' if priority_filter=='Critical' }}>Critical</option>
+        <option value="High" {{ 'selected' if priority_filter=='High' }}>High</option>
+        <option value="Medium" {{ 'selected' if priority_filter=='Medium' }}>Medium</option>
+      </select>
+      <button type="submit" class="btn-secondary btn">Filter</button>
+    </form>
+  </div>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Incident</th><th>Category</th><th>Severity</th><th>Priority</th><th>Area</th>
+        <th>Team</th><th>Status</th><th>Reported</th><th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i in incidents %}
+      <tr>
+        <td>
+          <strong>{{ i.title }}</strong>
+          {% if i.needs_escalation %}<div class="hint" style="color: var(--error);">⚠ Needs escalation</div>{% endif %}
+        </td>
+        <td>{{ i.category }}</td>
+        <td><span class="pill pill-{{ i.severity }}">{{ i.severity }}</span></td>
+        <td><span class="pill pill-{{ i.priority }}">{{ i.priority }}</span></td>
+        <td>{{ i.affected_area }}</td>
+        <td>{{ i.responsible_team }}</td>
+        <td><span class="pill pill-{{ i.status|replace(' ', '') }}">{{ i.status }}</span></td>
+        <td>{{ i.reported_at[:16] }}</td>
+        <td>
+          {% if i.status != 'Resolved' %}
+          <form method="POST" action="{{ url_for('update_incident_status', incident_id=i.id) }}" style="display:flex; gap:4px;">
+            {% if i.status == 'Open' %}
+            <input type="hidden" name="status" value="In Progress">
+            <button type="submit" class="btn-secondary btn" style="padding:6px 10px; font-size:12px;">Start Work</button>
+            {% else %}
+            <input type="hidden" name="status" value="Resolved">
+            <button type="submit" class="btn-secondary btn" style="padding:6px 10px; font-size:12px;">Resolve</button>
+            {% endif %}
+          </form>
+          {% else %}
+          <span class="hint">Resolved {{ i.resolved_at[:16] if i.resolved_at else '' }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="hint">No incidents match this filter.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

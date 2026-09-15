@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Sessions & Schedule{% endblock %}
+{% block heading %}Sessions &amp; Final Event Schedule{% endblock %}
+
+{% block content %}
+<div class="workflow-strip">
+  <span class="workflow-step current">1. Create Session</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step">2. Venue Agent</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step">3. Venue Booking</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step">4. Speaker Agent</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step">5. Speaker Assignment</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step">6. Final Schedule</span>
+</div>
+
+<div class="card">
+  <p class="panel-title">Create a New Session</p>
+  <form method="POST" action="{{ url_for('sessions') }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Session Title</label>
+        <input type="text" name="title" placeholder="e.g. Introduction to Machine Learning" required>
+      </div>
+      <div class="form-group">
+        <label>Topic</label>
+        <input type="text" name="topic" placeholder="e.g. Machine Learning" required>
+      </div>
+      <div class="form-group">
+        <label>Linked Event (optional)</label>
+        <select name="event_name">
+          <option value="">— Not linked to a specific event —</option>
+          {% for e in events %}
+          <option value="{{ e.name }}">{{ e.name }} ({{ e.event_date }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Expected Attendees</label>
+        <input type="number" name="attendees_expected" min="1" placeholder="e.g. 150" required>
+      </div>
+      <div class="form-group">
+        <label>Session Date</label>
+        <input type="date" name="session_date" required>
+      </div>
+      <div class="form-group">
+        <label>Start Time</label>
+        <input type="time" name="start_time" required>
+      </div>
+      <div class="form-group">
+        <label>End Time</label>
+        <input type="time" name="end_time" required>
+      </div>
+      <div class="form-group">
+        <label>Preferred Location (optional)</label>
+        <input type="text" name="preferred_location" placeholder="e.g. Block B">
+      </div>
+      <div class="form-group full">
+        <label>Required Facilities</label>
+        <div class="checkbox-grid">
+          {% for f in facility_options %}
+          <label class="checkbox-item"><input type="checkbox" name="facilities_required" value="{{ f }}"> {{ f }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <button type="submit" class="btn" style="margin-top:8px;">Create Session &amp; Find a Venue</button>
+  </form>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Final Integrated Event Schedule ({{ sessions|length }})</p>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Title</th><th>Topic</th><th>Event</th><th>Date</th><th>Time</th>
+        <th>Venue</th><th>Speaker</th><th>Status</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      <tr>
+        <td>{{ s.title }}</td>
+        <td>{{ s.topic }}</td>
+        <td>{{ s.event_name or '—' }}</td>
+        <td>{{ s.session_date }}</td>
+        <td>{{ s.start_time }}–{{ s.end_time }}</td>
+        <td>{% if s.venue_name %}{{ s.venue_name }} <span class="hint">(cap. {{ s.venue_capacity }})</span>{% else %}<span class="hint">Not booked</span>{% endif %}</td>
+        <td>{{ s.speaker_name or '—' }}</td>
+        <td><span class="pill pill-{{ s.status.replace(' ', '') }}">{{ s.status }}</span></td>
+        <td>
+          {% if not s.venue_id %}
+          <a href="{{ url_for('venue_agent_page', session_id=s.id) }}" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;">Find Venue</a>
+          {% endif %}
+          {% if not s.speaker_id %}
+          <a href="{{ url_for('speaker_agent_page', session_id=s.id) }}" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;">Find Speaker</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="hint">No sessions created yet. Use the form above to create the first one.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

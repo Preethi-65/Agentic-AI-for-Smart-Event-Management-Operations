@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Production Readiness{% endblock %}
+{% block heading %}Production Deployment Readiness{% endblock %}
+
+{% block content %}
+<div class="explain-banner">
+  <strong>What this page does:</strong> inspects the ACTUAL running configuration of this application — environment
+  variables, installed packages, filesystem, git-ignore rules and the latest recorded test run — and reports live,
+  real status. Nothing on this page is a hardcoded "production ready" claim.
+</div>
+
+<div class="card">
+  <div class="health-gauge-wrap">
+    <div class="health-score-circle health-{{ 'Healthy' if report.score >= 80 else ('NeedsAttention' if report.score >= 60 else 'AtRisk') }}">
+      <div class="score-num">{{ report.score }}</div>
+      <div class="score-label">/ 100</div>
+    </div>
+    <div>
+      <p class="panel-title" style="margin-bottom:6px;">Production Readiness Score</p>
+      <p class="muted">{{ report.passed }} passed · {{ report.warned }} warnings · {{ report.failed }} failed — out of {{ report.total }} live checks.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Readiness Checklist</p>
+  {% for c in report.checks %}
+  <div class="risk-row">
+    <span class="pill {{ 'pill-Healthy' if c.status == 'pass' else ('pill-NeedsAttention' if c.status == 'warn' else 'pill-AtRisk') }}">
+      {{ 'PASS' if c.status == 'pass' else ('WARN' if c.status == 'warn' else 'FAIL') }}
+    </span>
+    <div>
+      <div class="risk-area">{{ c.name }}</div>
+      <div>{{ c.description }}</div>
+      <div class="muted" style="font-size:12px; margin-top:2px;">{{ c.detail }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Deployment Commands</p>
+    <pre style="white-space:pre-wrap; font-size:12.5px; background:var(--panel-2); padding:14px; border-radius:10px;">pip install -r requirements.txt
+cp .env.example .env
+python -c "import database; database.init_db()"
+python seed_data.py
+gunicorn -w 4 -b 0.0.0.0:8000 wsgi:app</pre>
+  </div>
+  <div class="card">
+    <p class="panel-title">Related Documentation</p>
+    <p>Full deployment instructions, rollback plan and scalability notes are documented in <strong>DEPLOYMENT.md</strong> at the project root. Testing details are in <strong>TESTING.md</strong> and on the <a href="{{ url_for('testing_center') }}">Testing Center</a> page.</p>
+  </div>
+</div>
+{% endblock %}

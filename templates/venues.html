@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Venues{% endblock %}
+{% block heading %}Venues{% endblock %}
+
+{% block content %}
+<div class="card">
+  <p class="panel-title">Venue Directory ({{ venues|length }})</p>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Venue</th><th>Capacity</th><th>Location</th><th>Facilities</th><th>Cost / hr</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for v in venues %}
+      <tr>
+        <td><strong>{{ v.name }}</strong></td>
+        <td>{{ v.capacity }}</td>
+        <td>{{ v.location or '—' }}</td>
+        <td>
+          {% for f in (v.facilities or '').split(',') if f.strip() %}
+          <span class="facility-chip">{{ f.strip() }}</span>
+          {% endfor %}
+        </td>
+        <td>₹{{ "%.0f"|format(v.cost_per_hour) }}</td>
+        <td><span class="pill pill-{{ v.status }}">{{ v.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Venue Bookings ({{ bookings|length }})</p>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Venue</th><th>Date</th><th>Time</th><th>Attendees</th><th>Booked By</th><th>Label</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for b in bookings %}
+      <tr>
+        <td>{{ b.venue_name }} <span class="hint">(cap. {{ b.venue_capacity }})</span></td>
+        <td>{{ b.booking_date }}</td>
+        <td>{{ b.start_time }}–{{ b.end_time }}</td>
+        <td>{{ b.attendees }} <span class="hint">({{ ((b.attendees / b.venue_capacity) * 100) | round(1) }}% util.)</span></td>
+        <td>{{ b.booked_by }}</td>
+        <td>{{ b.label or '—' }}</td>
+        <td><span class="pill pill-{{ b.status }}">{{ b.status }}</span></td>
+        <td>
+          {% if b.status == 'Booked' %}
+          <form method="POST" action="{{ url_for('cancel_venue_booking', booking_id=b.id) }}">
+            <button type="submit" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;">Cancel</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="hint">No venue bookings yet. Use the Venue Agent to find and book a venue.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

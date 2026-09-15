@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Attendee Analytics{% endblock %}
+{% block heading %}Attendee Analytics{% endblock %}
+
+{% block content %}
+<div class="grid grid-3">
+  <div class="card">
+    <p class="panel-title">Age Group Distribution</p>
+    <canvas id="ageChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Registration by City</p>
+    <canvas id="cityChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Gender Distribution</p>
+    <canvas id="genderChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-3">
+  <div class="card">
+    <p class="panel-title">Daily Registrations</p>
+    <canvas id="dailyChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Event Popularity</p>
+    <canvas id="eventChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Check-in Status Analysis</p>
+    <canvas id="checkinChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <p class="panel-title">Attendees by Category</p>
+    <canvas id="categoryChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <p class="panel-title">Attendees by Priority Flag</p>
+    <canvas id="riskChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="section-spacer"></div>
+
+<div class="card">
+  <p class="panel-title">Day-wise Registration Trend</p>
+  <canvas id="trendChart" height="110"></canvas>
+</div>
+
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
+<script>
+const palette = ['#6d5efc', '#22d3c5', '#fbbf24', '#fb7185', '#9aa3c0', '#34d399', '#f472b6', '#60a5fa'];
+Chart.defaults.color = '#9aa3c0';
+Chart.defaults.borderColor = '#2a3150';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+const ageData = {{ stats.age_groups | tojson }};
+new Chart(document.getElementById('ageChart'), {
+  type: 'bar',
+  data: { labels: Object.keys(ageData), datasets: [{ label: 'Attendees', data: Object.values(ageData), backgroundColor: '#6d5efc', borderRadius: 6 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+const cityData = {{ stats.by_city | tojson }};
+new Chart(document.getElementById('cityChart'), {
+  type: 'bar',
+  data: { labels: Object.keys(cityData), datasets: [{ label: 'Attendees', data: Object.values(cityData), backgroundColor: '#22d3c5', borderRadius: 6 }] },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+});
+
+const genderData = {{ stats.by_gender | tojson }};
+new Chart(document.getElementById('genderChart'), {
+  type: 'doughnut',
+  data: { labels: Object.keys(genderData), datasets: [{ data: Object.values(genderData), backgroundColor: palette, borderWidth: 0 }] },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+const trendData = {{ stats.by_day | tojson }};
+new Chart(document.getElementById('dailyChart'), {
+  type: 'bar',
+  data: { labels: trendData.map(d => d.day), datasets: [{ label: 'Registrations', data: trendData.map(d => d.c), backgroundColor: '#fbbf24', borderRadius: 6 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+const eventData = {{ stats.by_event | tojson }};
+new Chart(document.getElementById('eventChart'), {
+  type: 'pie',
+  data: { labels: Object.keys(eventData), datasets: [{ data: Object.values(eventData), backgroundColor: palette, borderWidth: 0 }] },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+});
+
+new Chart(document.getElementById('checkinChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Checked In', 'Not Checked In'],
+    datasets: [{ data: [{{ stats.checked_in }}, {{ stats.not_checked_in }}], backgroundColor: ['#34d399', '#2a3150'], borderWidth: 0 }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } }, cutout: '65%' }
+});
+
+const categoryData = {{ stats.by_category | tojson }};
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: { labels: Object.keys(categoryData), datasets: [{ data: Object.values(categoryData), backgroundColor: palette, borderWidth: 0 }] },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+const riskData = {{ stats.by_risk | tojson }};
+new Chart(document.getElementById('riskChart'), {
+  type: 'bar',
+  data: { labels: Object.keys(riskData), datasets: [{ label: 'Attendees', data: Object.values(riskData), backgroundColor: '#fb7185', borderRadius: 6 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: trendData.map(d => d.day),
+    datasets: [{
+      label: 'Registrations', data: trendData.map(d => d.c),
+      borderColor: '#22d3c5', backgroundColor: 'rgba(34,211,197,0.15)',
+      fill: true, tension: 0.35, pointBackgroundColor: '#22d3c5'
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endblock %}
